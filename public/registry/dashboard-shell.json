@@ -1,0 +1,15 @@
+{
+  "slug": "dashboard-shell",
+  "name": "Dashboard Shell",
+  "category": "dashboard",
+  "version": "1.0.0",
+  "dependencies": {
+    "lucide-react": "^0.563.0"
+  },
+  "files": [
+    {
+      "path": "src/components/site/dashboard-shell.tsx",
+      "type": "component"
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "slug": "button",
+  "name": "Button",
+  "category": "primitives",
+  "version": "1.0.0",
+  "dependencies": {
+    "class-variance-authority": "^0.7.1",
+    "lucide-react": "^0.563.0",
+    "tailwind-merge": "^3.4.0"
+  },
+  "files": [
+    {
+      "path": "src/components/ui/button.tsx",
+      "type": "component"
+    }
+  ]
+}

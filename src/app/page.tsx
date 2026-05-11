@@ -1,11 +1,5 @@
+import { LandingPage } from "@/components/site/landing-page";
 
-export default async function Home() {
-  await new Promise((r) => setTimeout(r, 2000)); 
-  return (
- 
-
-
-    <h1>Hello</h1>
-
-  );
+export default function Home() {
+  return <LandingPage />;
 }
