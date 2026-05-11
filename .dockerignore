@@ -1,0 +1,7 @@
+.next
+node_modules
+.git
+.env
+drizzle
+coverage
+*.log

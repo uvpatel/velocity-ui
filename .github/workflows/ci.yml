@@ -24,10 +24,13 @@ jobs:
           cache: pnpm
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile
 
       - name: Typecheck
         run: pnpm typecheck
+
+      - name: Format
+        run: pnpm format
 
       - name: Lint
         run: pnpm lint

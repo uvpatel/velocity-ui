@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://velocity-ui.com/schema/registry-item.json",
+  "title": "Velocity UI Registry Item",
+  "type": "object",
+  "required": ["name", "title", "description", "type", "version", "files"],
+  "properties": {
+    "name": { "type": "string" },
+    "title": { "type": "string" },
+    "description": { "type": "string" },
+    "type": { "const": "registry:component" },
+    "version": { "type": "string" },
+    "status": { "enum": ["stable", "beta", "experimental"] },
+    "dependencies": { "type": "object", "additionalProperties": { "type": "string" } },
+    "devDependencies": { "type": "object", "additionalProperties": { "type": "string" } },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "type", "target"],
+        "properties": {
+          "path": { "type": "string" },
+          "type": { "type": "string" },
+          "target": { "type": "string" }
+        }
+      }
+    }
+  }
+}

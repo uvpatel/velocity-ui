@@ -1,6 +1,7 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import { database } from "@/lib/db";
 import { appUrl, env } from "@/lib/env";
 import * as schema from "@/db/schema";
@@ -63,22 +64,18 @@ export async function requireUser() {
   const session = await getSession();
 
   if (!session?.user) {
-    throw new Error("Unauthorized");
+    redirect("/sign-in");
   }
 
   return session.user;
-}import { betterAuth } from "better-auth";
-import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { drizzle } from "drizzle-orm/node-postgres";
-import { Pool } from "pg";
-import * as schema from "./auth-schema";
+}
 
-const db = drizzle(new Pool({ connectionString: process.env.DATABASE_URL }), {
-  schema,
-});
+export async function requireAdmin() {
+  const user = await requireUser();
 
-export const auth = betterAuth({
-  database: drizzleAdapter(db, { provider: "pg", schema }),
-  baseURL: "http://localhost:3000/",
-  emailAndPassword: { enabled: true },
-});
+  if (user.role !== "admin") {
+    redirect("/dashboard");
+  }
+
+  return user;
+}

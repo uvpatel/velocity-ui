@@ -1,18 +1,9 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
+import type { Route } from "next";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-
-const docs = {
-  "getting-started": {
-    title: "Getting started",
-    description: "Set up Velocity UI, connect auth, and publish your first registry item.",
-    sections: ["Install dependencies with pnpm", "Copy .env.example", "Run database migrations", "Open the dashboard"],
-  },
-  registry: {
-    title: "Registry architecture",
-    description: "Understand manifests, versioning, dependencies, and install flows.",
-    sections: ["Manifest schema", "CLI install flow", "Publishing workflow", "Preview rendering"],
-  },
-} as const;
+import { PageShell } from "@/components/site/page-shell";
+import { docs, docsNav } from "@/lib/platform";
 
 type PageProps = {
   params: Promise<{ slug: string }>;
@@ -31,7 +22,14 @@ export default async function DocPage({ params }: PageProps) {
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-6 py-10 md:px-10 lg:px-12">
+    <PageShell className="max-w-5xl">
+      <div className="flex flex-wrap gap-2">
+        {docsNav.map((item) => (
+          <Link key={item.href} href={item.href as Route} className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-muted-foreground transition hover:text-foreground">
+            {item.title}
+          </Link>
+        ))}
+      </div>
       <Card className="glass-panel border-white/10 bg-white/5">
         <CardHeader>
           <CardTitle>{doc.title}</CardTitle>
@@ -45,6 +43,6 @@ export default async function DocPage({ params }: PageProps) {
           ))}
         </CardContent>
       </Card>
-    </main>
+    </PageShell>
   );
 }

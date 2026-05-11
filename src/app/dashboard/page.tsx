@@ -1,8 +1,11 @@
 import Link from "next/link";
 import { ArrowRight, BarChart3, Bell, ClipboardList, FolderKanban, LayoutGrid, ShieldCheck, Sparkles, Users } from "lucide-react";
+import { PageShell } from "@/components/site/page-shell";
+import { MetricGrid } from "@/components/site/metric-grid";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { dashboardModules, productStats } from "@/lib/platform";
 
 const widgets = [
   { label: "Active users", value: "12.4k", delta: "+18.4%" },
@@ -19,7 +22,7 @@ const shortcuts = [
 
 export default function DashboardPage() {
   return (
-    <main className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-6 py-10 md:px-10 lg:px-12">
+    <PageShell>
       <section className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div className="space-y-2">
           <Badge className="rounded-full px-3 py-1.5">Dashboard</Badge>
@@ -37,14 +40,23 @@ export default function DashboardPage() {
         </Button>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {widgets.map((widget) => (
-          <Card key={widget.label} className="glass-panel border-white/10 bg-white/5">
-            <CardHeader className="pb-3">
-              <CardDescription>{widget.label}</CardDescription>
-              <CardTitle className="text-3xl">{widget.value}</CardTitle>
-            </CardHeader>
-            <CardContent className="pb-5 text-sm text-emerald-500">{widget.delta} vs last month</CardContent>
+      <MetricGrid metrics={[...widgets, ...productStats].slice(0, 4)} />
+
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {dashboardModules.map((module) => (
+          <Card key={module.title} className="glass-panel border-white/10 bg-white/5">
+            <CardContent className="flex items-start gap-4 px-6 py-5">
+              <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+                <module.icon className="size-5" />
+              </span>
+              <div>
+                <div className="flex items-center gap-2">
+                  <CardTitle className="text-base">{module.title}</CardTitle>
+                  <Badge variant="secondary" className="rounded-full">{module.value}</Badge>
+                </div>
+                <CardDescription className="mt-2 leading-6">{module.description}</CardDescription>
+              </div>
+            </CardContent>
           </Card>
         ))}
       </section>
@@ -104,6 +116,6 @@ export default function DashboardPage() {
           </Card>
         </div>
       </section>
-    </main>
+    </PageShell>
   );
 }

@@ -5,10 +5,18 @@ export type RegistryItem = {
   category: string;
   tags: string[];
   version: string;
+  status: "stable" | "beta" | "experimental";
   dependencies: Record<string, string>;
+  devDependencies?: Record<string, string>;
   files: Array<{ path: string; type: string }>;
+  cssVars?: Record<string, string>;
+  docsPath: string;
   previewUrl?: string;
   installCommand: string;
+  analytics: {
+    downloads: number;
+    likes: number;
+  };
 };
 
 export const registryCatalog: RegistryItem[] = [
@@ -19,14 +27,24 @@ export const registryCatalog: RegistryItem[] = [
     category: "primitives",
     tags: ["forms", "cta", "interactive"],
     version: "1.0.0",
+    status: "stable",
     dependencies: {
       "class-variance-authority": "^0.7.1",
       "tailwind-merge": "^3.4.0",
       "lucide-react": "^0.563.0",
     },
     files: [{ path: "src/components/ui/button.tsx", type: "component" }],
+    cssVars: {
+      "--radius": "0.625rem",
+      "--primary": "oklch(0.98 0.01 240)",
+    },
+    docsPath: "/docs/registry",
     previewUrl: "/registry/button",
-    installCommand: "pnpm dlx myui add button",
+    installCommand: "pnpm dlx velocity-ui add button",
+    analytics: {
+      downloads: 48200,
+      likes: 3100,
+    },
   },
   {
     slug: "dashboard-shell",
@@ -35,12 +53,80 @@ export const registryCatalog: RegistryItem[] = [
     category: "dashboard",
     tags: ["layout", "navigation", "teams"],
     version: "1.0.0",
+    status: "stable",
     dependencies: {
       "lucide-react": "^0.563.0",
     },
     files: [{ path: "src/components/site/dashboard-shell.tsx", type: "component" }],
+    docsPath: "/docs/registry",
     previewUrl: "/dashboard",
-    installCommand: "pnpm dlx myui add dashboard-shell",
+    installCommand: "pnpm dlx velocity-ui add dashboard-shell",
+    analytics: {
+      downloads: 28900,
+      likes: 1900,
+    },
+  },
+  {
+    slug: "ai-command-palette",
+    name: "AI Command Palette",
+    description: "A command interface for prompts, tool calls, shortcuts, and generated component history.",
+    category: "ai",
+    tags: ["command", "ai", "productivity"],
+    version: "0.8.0",
+    status: "beta",
+    dependencies: {
+      "lucide-react": "^0.563.0",
+      zustand: "^5.0.8",
+    },
+    files: [{ path: "src/components/velocity/ai-command-palette.tsx", type: "component" }],
+    docsPath: "/docs/cli",
+    previewUrl: "/ai",
+    installCommand: "pnpm dlx velocity-ui add ai-command-palette",
+    analytics: {
+      downloads: 14200,
+      likes: 860,
+    },
+  },
+  {
+    slug: "billing-matrix",
+    name: "Billing Matrix",
+    description: "A responsive pricing and entitlement surface for SaaS billing and plan comparison.",
+    category: "commerce",
+    tags: ["billing", "pricing", "subscriptions"],
+    version: "0.9.0",
+    status: "beta",
+    dependencies: {
+      "lucide-react": "^0.563.0",
+    },
+    files: [{ path: "src/components/velocity/billing-matrix.tsx", type: "component" }],
+    docsPath: "/docs/getting-started",
+    previewUrl: "/pricing",
+    installCommand: "pnpm dlx velocity-ui add billing-matrix",
+    analytics: {
+      downloads: 19600,
+      likes: 1200,
+    },
+  },
+  {
+    slug: "kanban-board",
+    name: "Kanban Board",
+    description: "A keyboard-accessible project board with lanes, cards, activity, and empty states.",
+    category: "workflows",
+    tags: ["kanban", "dashboard", "collaboration"],
+    version: "0.6.0",
+    status: "experimental",
+    dependencies: {
+      "framer-motion": "^12.35.1",
+      "lucide-react": "^0.563.0",
+    },
+    files: [{ path: "src/components/velocity/kanban-board.tsx", type: "component" }],
+    docsPath: "/docs/registry",
+    previewUrl: "/components",
+    installCommand: "pnpm dlx velocity-ui add kanban-board",
+    analytics: {
+      downloads: 7200,
+      likes: 510,
+    },
   },
 ];
 
@@ -62,5 +148,40 @@ export function searchRegistry(query: string) {
 }
 
 export function buildInstallCommand(slug: string) {
-  return `pnpm dlx myui add ${slug}`;
+  return `pnpm dlx velocity-ui add ${slug}`;
+}
+
+export function getRegistryCategories() {
+  return Array.from(new Set(registryCatalog.map((item) => item.category))).sort();
+}
+
+export function getRegistryTags() {
+  return Array.from(new Set(registryCatalog.flatMap((item) => item.tags))).sort();
+}
+
+export function toRegistryManifest(item: RegistryItem) {
+  return {
+    $schema: "https://velocity-ui.com/schema/registry-item.json",
+    name: item.slug,
+    title: item.name,
+    description: item.description,
+    type: "registry:component",
+    version: item.version,
+    status: item.status,
+    registryDependencies: [],
+    dependencies: item.dependencies,
+    devDependencies: item.devDependencies ?? {},
+    files: item.files.map((file) => ({
+      path: file.path,
+      type: file.type,
+      target: file.path,
+    })),
+    cssVars: item.cssVars ?? {},
+    meta: {
+      category: item.category,
+      tags: item.tags,
+      docs: item.docsPath,
+      preview: item.previewUrl,
+    },
+  };
 }

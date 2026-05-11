@@ -27,6 +27,11 @@ export const BackgroundBeams = ({ className }: { className?: string }) => {
     "M-254 -333C-254 -333 -186 72 278 199C742 326 810 731 810 731",
     "M-247 -341C-247 -341 -179 64 285 191C749 318 817 723 817 723",
   ];
+  const gradientTimings = paths.map((_path, index) => ({
+    y2: `${93 + ((index * 7) % 8)}%`,
+    duration: 10 + ((index * 5) % 10),
+    delay: (index * 3) % 10,
+  }));
 
   return (
     <div
@@ -67,13 +72,13 @@ export const BackgroundBeams = ({ className }: { className?: string }) => {
                 x1: ["0%", "100%"],
                 x2: ["0%", "95%"],
                 y1: ["0%", "100%"],
-                y2: ["0%", `${93 + Math.random() * 8}%`],
+                y2: ["0%", gradientTimings[index].y2],
               }}
               transition={{
-                duration: Math.random() * 10 + 10,
+                duration: gradientTimings[index].duration,
                 ease: "easeInOut",
                 repeat: Infinity,
-                delay: Math.random() * 10,
+                delay: gradientTimings[index].delay,
               }}
             >
               <stop stopColor="#18CCFC" stopOpacity="0" />

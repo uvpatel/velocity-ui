@@ -1,0 +1,15 @@
+{
+  "name": "velocity-ui",
+  "version": "0.1.0",
+  "description": "CLI for installing Velocity UI registry components.",
+  "type": "module",
+  "bin": {
+    "velocity-ui": "./src/index.js"
+  },
+  "files": [
+    "src"
+  ],
+  "engines": {
+    "node": ">=20.9"
+  }
+}

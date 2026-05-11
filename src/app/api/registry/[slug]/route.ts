@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getRegistryItem, buildInstallCommand } from "@/lib/registry";
+import { buildInstallCommand, getRegistryItem, toRegistryManifest } from "@/lib/registry";
 
 type RouteParams = {
   params: Promise<{ slug: string }>;
@@ -16,5 +16,6 @@ export async function GET(_request: Request, { params }: RouteParams) {
   return NextResponse.json({
     ...item,
     installCommand: buildInstallCommand(item.slug),
+    manifest: toRegistryManifest(item),
   });
 }

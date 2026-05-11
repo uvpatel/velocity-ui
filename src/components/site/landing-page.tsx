@@ -36,7 +36,7 @@ const features = [
   },
   {
     title: "CLI + install flow",
-    description: "Ship `npx myui add button` style commands with dependency detection and registry sync.",
+    description: "Ship `npx velocity-ui add button` style commands with dependency detection and registry sync.",
     icon: Command,
   },
 ];
@@ -173,7 +173,7 @@ export function LandingPage() {
                     <span className="size-2 rounded-full bg-red-400" />
                     <span className="size-2 rounded-full bg-amber-300" />
                     <span className="size-2 rounded-full bg-emerald-400" />
-                    npx myui add button
+                    npx velocity-ui add button
                   </div>
                   <pre className="overflow-x-auto whitespace-pre-wrap leading-6 text-slate-300">
 {`Resolving registry item: button
