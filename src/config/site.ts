@@ -3,7 +3,7 @@ export const siteConfig = {
   description: "An open-source UI library, component registry, and SaaS platform for modern product teams.",
   url: process.env.NEXT_PUBLIC_APP_URL ?? "https://velocity-ui.com",
   links: {
-    github: "https://github.com/velocity-ui/velocity-ui",
+    github: "https://github.com/uvpatel/velocity-ui",
     docs: "/docs/getting-started",
     registry: "/registry",
   },
