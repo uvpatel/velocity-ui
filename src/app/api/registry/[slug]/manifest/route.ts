@@ -15,7 +15,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: "Registry item not found" }, { status: 404 });
   }
 
-  const manifest = toRegistryManifest(item);
+  const manifest = await toRegistryManifest(item);
   const root = process.cwd();
 
   const files = await Promise.all(

@@ -20,6 +20,6 @@ export async function POST(request: Request) {
     slug: item.slug,
     command: buildInstallCommand(item.slug),
     dependencies: item.dependencies,
-    manifest: toRegistryManifest(item),
+    manifest: await toRegistryManifest(item),
   });
 }

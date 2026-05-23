@@ -1,16 +1,19 @@
 #!/usr/bin/env node
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { spawnSync } from "node:child_process";
 
-const REGISTRY_BASE_URL = process.env.REGISTRY_BASE_URL ?? "https://velocity-ui.com";
+const DEFAULT_REGISTRY_BASE_URL = process.env.REGISTRY_BASE_URL ?? "https://velocity-ui.com";
+const CONFIG_FILE = "velocity.config.json";
 
 function printHelp() {
   console.log(`Velocity UI CLI
 
 Usage:
-  npx velocity-ui add <component>
-  npx velocity-ui sync
-  npx velocity-ui init
+  velocity-ui add <component-or-url>
+  velocity-ui init
+  velocity-ui registry build
+  velocity-ui sync
 
 Environment:
   REGISTRY_BASE_URL  Override registry origin for local development
@@ -23,28 +26,95 @@ function detectProject(cwd) {
   const dependencies = { ...(packageJson.dependencies ?? {}), ...(packageJson.devDependencies ?? {}) };
 
   return {
-    packageManager: existsSync(join(cwd, "pnpm-lock.yaml")) ? "pnpm" : existsSync(join(cwd, "bun.lock")) ? "bun" : "npm",
+    packageManager: existsSync(join(cwd, "pnpm-lock.yaml"))
+      ? "pnpm"
+      : existsSync(join(cwd, "bun.lock"))
+        ? "bun"
+        : "npm",
     hasNext: Boolean(dependencies.next),
-    hasTailwindV4: Boolean(dependencies.tailwindcss?.startsWith("^4") || dependencies.tailwindcss?.startsWith("4")),
+    hasTailwindV4: Boolean(
+      dependencies.tailwindcss?.startsWith("^4") || dependencies.tailwindcss?.startsWith("4"),
+    ),
     hasSrcDir: existsSync(join(cwd, "src")),
   };
 }
 
-async function fetchManifest(slug) {
-  const response = await fetch(`${REGISTRY_BASE_URL}/api/registry/${slug}/manifest`);
+function readLocalConfig(cwd) {
+  const configPath = join(cwd, CONFIG_FILE);
+
+  if (!existsSync(configPath)) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(readFileSync(configPath, "utf8"));
+  } catch {
+    return null;
+  }
+}
+
+function createRegistryBaseUrl(config) {
+  return config?.registry ?? DEFAULT_REGISTRY_BASE_URL;
+}
+
+function resolveRegistryUrl(identifier, registryBaseUrl) {
+  if (/^https?:\/\//i.test(identifier)) {
+    return identifier;
+  }
+
+  if (identifier.startsWith("/")) {
+    return `${registryBaseUrl}${identifier}`;
+  }
+
+  return `${registryBaseUrl}/api/registry/${identifier}`;
+}
+
+async function fetchJson(url) {
+  const response = await fetch(url);
 
   if (!response.ok) {
-    throw new Error(`Registry item "${slug}" was not found.`);
+    throw new Error(`Registry request failed with status ${response.status} for ${url}`);
   }
 
   return response.json();
 }
 
-function writeConfig(cwd) {
-  const target = join(cwd, "velocity.config.json");
+async function fetchManifest(identifier, registryBaseUrl) {
+  const attempts = [
+    resolveRegistryUrl(identifier, registryBaseUrl),
+    resolveRegistryUrl(`${identifier}/manifest`, registryBaseUrl),
+  ];
+
+  let lastError;
+
+  for (const url of attempts) {
+    try {
+      return await fetchJson(url);
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw new Error(`Registry item "${identifier}" was not found. ${lastError?.message ?? ""}`.trim());
+}
+
+function ensureWithinWorkspace(cwd, targetPath) {
+  const absoluteCwd = resolve(cwd);
+  const absoluteTarget = resolve(cwd, targetPath);
+  const distance = relative(absoluteCwd, absoluteTarget);
+
+  if (distance.startsWith("..") || isAbsolute(distance)) {
+    throw new Error(`Refusing to write outside the current workspace: ${targetPath}`);
+  }
+
+  return absoluteTarget;
+}
+
+function writeConfig(cwd, registryBaseUrl) {
+  const target = join(cwd, CONFIG_FILE);
 
   if (existsSync(target)) {
-    console.log("velocity.config.json already exists");
+    console.log(`${CONFIG_FILE} already exists`);
     return;
   }
 
@@ -53,7 +123,7 @@ function writeConfig(cwd) {
     JSON.stringify(
       {
         $schema: "https://velocity-ui.com/schema/config.json",
-        registry: REGISTRY_BASE_URL,
+        registry: registryBaseUrl,
         aliases: {
           components: "src/components",
           ui: "src/components/ui",
@@ -64,13 +134,51 @@ function writeConfig(cwd) {
       2,
     ),
   );
-  console.log("Created velocity.config.json");
+
+  console.log(`Created ${CONFIG_FILE}`);
 }
 
-async function addComponent(slug) {
+function installDependencies(packageManager, dependencies = {}, devDependencies = {}) {
+  const commands = [];
+
+  const dependencyEntries = Object.entries(dependencies);
+  if (dependencyEntries.length) {
+    commands.push({
+      command: packageManager,
+      args:
+        packageManager === "npm"
+          ? ["install", "--save", ...dependencyEntries.map(([name, version]) => `${name}@${version}`)]
+          : ["add", ...dependencyEntries.map(([name, version]) => `${name}@${version}`)],
+    });
+  }
+
+  const devDependencyEntries = Object.entries(devDependencies);
+  if (devDependencyEntries.length) {
+    commands.push({
+      command: packageManager,
+      args:
+        packageManager === "npm"
+          ? ["install", "--save-dev", ...devDependencyEntries.map(([name, version]) => `${name}@${version}`)]
+          : ["add", "-D", ...devDependencyEntries.map(([name, version]) => `${name}@${version}`)],
+    });
+  }
+
+  for (const step of commands) {
+    const result = spawnSync(step.command, step.args, {
+      stdio: "inherit",
+      shell: process.platform === "win32",
+    });
+
+    if (result.status !== 0) {
+      throw new Error(`Failed to install dependencies with ${packageManager}.`);
+    }
+  }
+}
+
+async function addComponent(identifier, registryBaseUrl) {
   const cwd = process.cwd();
   const project = detectProject(cwd);
-  const manifest = await fetchManifest(slug);
+  const manifest = await fetchManifest(identifier, registryBaseUrl);
 
   if (!project.hasNext) {
     console.warn("Next.js was not detected. Continuing because registry files are framework-readable.");
@@ -81,11 +189,11 @@ async function addComponent(slug) {
   }
 
   for (const file of manifest.files ?? []) {
-    const targetPath = resolve(cwd, file.target ?? file.path);
-    const relativeTarget = targetPath.slice(resolve(cwd).length);
+    const targetPath = ensureWithinWorkspace(cwd, file.target ?? file.path);
 
-    if (!targetPath.startsWith(resolve(cwd)) || relativeTarget.includes("..")) {
-      throw new Error(`Refusing to write outside the current workspace: ${file.target ?? file.path}`);
+    if (existsSync(targetPath)) {
+      console.warn(`Skipping existing file ${file.target ?? file.path}`);
+      continue;
     }
 
     if (!file.content) {
@@ -98,12 +206,29 @@ async function addComponent(slug) {
     console.log(`Created ${file.target ?? file.path}`);
   }
 
-  console.log(`Resolved dependencies: ${Object.keys(manifest.dependencies ?? {}).join(", ") || "none"}`);
-  console.log(`Use ${project.packageManager} to install any dependencies listed above.`);
+  const dependencies = manifest.dependencies ?? {};
+  const devDependencies = manifest.devDependencies ?? {};
+  const dependencyCount = Object.keys(dependencies).length + Object.keys(devDependencies).length;
+
+  console.log(`Resolved ${dependencyCount} dependency${dependencyCount === 1 ? "" : "ies"}.`);
+  installDependencies(project.packageManager, dependencies, devDependencies);
+}
+
+async function buildRegistryIndex(registryBaseUrl) {
+  const cwd = process.cwd();
+  const payload = await fetchJson(`${registryBaseUrl}/api/registry`);
+  const target = join(cwd, "public", "registry", "index.json");
+
+  mkdirSync(dirname(target), { recursive: true });
+  writeFileSync(target, JSON.stringify(payload, null, 2), "utf8");
+  console.log(`Wrote registry index to ${target}`);
 }
 
 async function main() {
-  const [, , command, slug] = process.argv;
+  const [, , command, ...args] = process.argv;
+  const [firstArg, secondArg] = args;
+  const config = readLocalConfig(process.cwd());
+  const registryBaseUrl = createRegistryBaseUrl(config);
 
   if (!command || command === "--help" || command === "-h") {
     printHelp();
@@ -111,19 +236,28 @@ async function main() {
   }
 
   if (command === "init") {
-    writeConfig(process.cwd());
+    writeConfig(process.cwd(), registryBaseUrl);
+    return;
+  }
+
+  if (command === "registry" && firstArg === "build") {
+    await buildRegistryIndex(registryBaseUrl);
     return;
   }
 
   if (command === "sync") {
-    const response = await fetch(`${REGISTRY_BASE_URL}/api/registry`);
-    const catalog = await response.json();
+    const catalog = await fetchJson(`${registryBaseUrl}/api/registry`);
     console.log(`Registry contains ${catalog.registry?.length ?? 0} components`);
     return;
   }
 
-  if (command === "add" && slug) {
-    await addComponent(slug);
+  if (command === "add" && firstArg) {
+    await addComponent(firstArg, registryBaseUrl);
+    return;
+  }
+
+  if (command === "add" && secondArg) {
+    await addComponent(secondArg, registryBaseUrl);
     return;
   }
 

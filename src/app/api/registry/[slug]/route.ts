@@ -16,6 +16,6 @@ export async function GET(_request: Request, { params }: RouteParams) {
   return NextResponse.json({
     ...item,
     installCommand: buildInstallCommand(item.slug),
-    manifest: toRegistryManifest(item),
+    manifest: await toRegistryManifest(item),
   });
 }

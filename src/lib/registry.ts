@@ -1,3 +1,7 @@
+import { existsSync } from "node:fs";
+import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
+
 export type RegistryItem = {
   slug: string;
   name: string;
@@ -17,6 +21,10 @@ export type RegistryItem = {
     downloads: number;
     likes: number;
   };
+};
+
+export type RegistryManifestFile = RegistryItem["files"][number] & {
+  content?: string;
 };
 
 export const registryCatalog: RegistryItem[] = [
@@ -148,7 +156,7 @@ export function searchRegistry(query: string) {
 }
 
 export function buildInstallCommand(slug: string) {
-  return `pnpm dlx velocity-ui add ${slug}`;
+  return `velocity-ui add ${slug}`;
 }
 
 export function getRegistryCategories() {
@@ -159,7 +167,26 @@ export function getRegistryTags() {
   return Array.from(new Set(registryCatalog.flatMap((item) => item.tags))).sort();
 }
 
-export function toRegistryManifest(item: RegistryItem) {
+async function hydrateRegistryFiles(item: RegistryItem): Promise<RegistryManifestFile[]> {
+  const workspaceRoot = resolve(process.cwd());
+
+  return Promise.all(
+    item.files.map(async (file) => {
+      const absolutePath = resolve(workspaceRoot, file.path);
+
+      if (!absolutePath.startsWith(workspaceRoot) || !existsSync(absolutePath)) {
+        return file;
+      }
+
+      const content = await readFile(absolutePath, "utf8");
+      return { ...file, content };
+    }),
+  );
+}
+
+export async function toRegistryManifest(item: RegistryItem) {
+  const files = await hydrateRegistryFiles(item);
+
   return {
     $schema: "https://velocity-ui.com/schema/registry-item.json",
     name: item.slug,
@@ -171,10 +198,11 @@ export function toRegistryManifest(item: RegistryItem) {
     registryDependencies: [],
     dependencies: item.dependencies,
     devDependencies: item.devDependencies ?? {},
-    files: item.files.map((file) => ({
+    files: files.map((file) => ({
       path: file.path,
       type: file.type,
       target: file.path,
+      content: file.content,
     })),
     cssVars: item.cssVars ?? {},
     meta: {

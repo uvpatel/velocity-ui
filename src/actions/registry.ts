@@ -22,6 +22,6 @@ export async function createInstallIntent(input: unknown) {
   return {
     ok: true,
     command: item.installCommand,
-    manifest: toRegistryManifest(item),
+    manifest: await toRegistryManifest(item),
   } as const;
 }
